@@ -1,7 +1,7 @@
 #root {
   max-width: 1280px;
   margin: 0 auto;
-  padding: 2rem;
+  /* padding: 2rem; */
   text-align: center;
   font-family: sans-serif;
 }
@@ -11,7 +11,8 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 60vh;
+  min-height: 50vh;
+  padding: 1rem;
 }
 
 .home-buttons {
@@ -21,8 +22,8 @@
 }
 
 .home-buttons button {
-  padding: 1.2rem 2.5rem;
-  font-size: 1.3rem;
+  padding: 1rem 2rem;
+  font-size: 1rem;
   border-radius: 8px;
   border: none;
   background: #1976d2;

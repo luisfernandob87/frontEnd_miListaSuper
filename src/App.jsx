@@ -3,10 +3,13 @@ import { useState, useRef } from 'react'
 import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import Quagga from 'quagga';
 import './App.css'
+import Publicidad from '../src/components/Publicidad'
 
 const Home = () => {
   const navigate = useNavigate();
   return (
+    <>
+    <Publicidad/>    
     <div className="home-container">
       <h1>Bienvenido</h1>
       <div className="home-buttons">
@@ -14,6 +17,7 @@ const Home = () => {
         <button onClick={() => navigate('/stores')}>Lista de Compras</button>
       </div>
     </div>
+    </>
   );
 };
 
@@ -21,6 +25,8 @@ const StoreSelect = () => {
   const navigate = useNavigate();
   const stores = ["Paiz", "Walmart", "Maxidespensa", "La Torre"];
   return (
+    <>
+    <Publicidad/>    
     <div className="store-select-container">
       <h2>Selecciona una tienda</h2>
       <div className="store-buttons">
@@ -29,6 +35,7 @@ const StoreSelect = () => {
         ))}
       </div>
     </div>
+    </>
   );
 };
 
@@ -176,6 +183,7 @@ function ScanPage() {
 
   return (
     <>
+    <Publicidad/>    
       <h1>Escáner de Código de Barras</h1>
       <button onClick={toggleScanner}>
         {isScannerActive ? 'Desactivar Escáner' : 'Activar Escáner'}
