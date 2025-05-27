@@ -14,7 +14,7 @@ function ComparePage() {
 
   const fetchProductInfo = async (code) => {
     try {
-      const response = await fetch(`http://localhost:3000/api/product/${code}`);
+      const response = await fetch(`https://backend-milistasuper.onrender.com/api/product/${code}`);
       if (!response.ok) throw new Error('Network response was not ok');
       const data = await response.json();
       setProducts(prevProducts => ({
