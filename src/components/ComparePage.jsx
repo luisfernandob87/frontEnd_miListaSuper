@@ -10,9 +10,11 @@ function ComparePage() {
   const [showModal, setShowModal] = useState(false);
   const [tempScannedCode, setTempScannedCode] = useState('');
   const [products, setProducts] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
   const scannerRef = useRef(null);
 
   const fetchProductInfo = async (code) => {
+    setIsLoading(true);
     try {
       const response = await fetch(`https://backend-milistasuper.onrender.com/api/product/${code}`);
       if (!response.ok) throw new Error('Network response was not ok');
@@ -23,6 +25,8 @@ function ComparePage() {
       }));
     } catch (error) {
       console.error('Error fetching product info:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -154,9 +158,49 @@ function ComparePage() {
     <>
       <Publicidad/>
       <h2>Comparar Precios</h2>
-      <button onClick={toggleScanner}>
+      <button onClick={toggleScanner} disabled={isLoading}>
         {isScannerActive ? 'Desactivar Escáner' : 'Activar Escáner'}
       </button>
+      {isLoading && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            padding: '20px',
+            borderRadius: '10px',
+            backgroundColor: 'white',
+            textAlign: 'center'
+          }}>
+            <div style={{
+              border: '4px solid #f3f3f3',
+              borderTop: '4px solid #3498db',
+              borderRadius: '50%',
+              width: '40px',
+              height: '40px',
+              margin: '0 auto',
+              animation: 'spin 1s linear infinite'
+            }} />
+            <p style={{ marginTop: '10px' }}>Cargando...</p>
+          </div>
+        </div>
+      )}
+      <style>
+        {`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}
+      </style>
       <div ref={scannerRef} id="interactive" className={`viewport scanner-container ${isScannerActive ? '' : 'hidden'}`}>
       </div>
       {showModal && (
@@ -267,7 +311,17 @@ function ComparePage() {
           />
           <button
             type="button"
-            style={{ padding: '0.5rem 1.2rem', fontSize: '1.1rem', borderRadius: '6px', border: 'none', background: '#1976d2', color: 'white', fontWeight: 'bold', cursor: 'pointer' }}
+            disabled={isLoading}
+            style={{
+              padding: '0.5rem 1.2rem',
+              fontSize: '1.1rem',
+              borderRadius: '6px',
+              border: 'none',
+              background: isLoading ? '#cccccc' : '#1976d2',
+              color: 'white',
+              fontWeight: 'bold',
+              cursor: isLoading ? 'not-allowed' : 'pointer'
+            }}
             onClick={(e) => {
               const input = document.getElementById('manual-barcode');
               if (input) {
