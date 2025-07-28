@@ -1,10 +1,20 @@
 import { useState, useRef, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import Quagga from 'quagga';
 import Publicidad from './Publicidad';
 import ConfirmationModal from './ConfirmationModal';
 import config from '../config';
 
-function ComparePage() {
+function Compras() {
+  const location = useLocation();
+  const selectedStore = location.state?.store || "Walmart";
+  const storeApiMap = {
+    "Paiz": "paiz",
+    "Walmart": "walmart",
+    "Maxidespensa": "maxidespensa",
+    "La Torre": "latorre"
+  };
+  
   const [scannedCodes, setScannedCodes] = useState([]);
   const [currentScan, setCurrentScan] = useState('Not Found');
   const [isScannerActive, setIsScannerActive] = useState(false);
@@ -12,19 +22,57 @@ function ComparePage() {
   const [tempScannedCode, setTempScannedCode] = useState('');
   const [products, setProducts] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+  const [cartItems, setCartItems] = useState([]);
+  const [total, setTotal] = useState(0);
   const scannerRef = useRef(null);
 
   const fetchProductInfo = async (code) => {
     setIsLoading(true);
     try {
       const apiBaseUrl = config.getApiBaseUrl();
-      const response = await fetch(`${apiBaseUrl}/api/product/${code}`);
+      const storeApiEndpoint = storeApiMap[selectedStore];
+      const response = await fetch(`${apiBaseUrl}/api/${storeApiEndpoint}/${code}`);
       if (!response.ok) throw new Error('Network response was not ok');
-      const data = await response.json();
+      const responseData = await response.json();
+      
+      console.log('Respuesta completa de la API:', responseData);
+      
+      // Extraer los datos del producto según la estructura de respuesta
+      // La API devuelve un objeto con una propiedad que corresponde al nombre de la tienda
+      const data = responseData[storeApiEndpoint] || {};
+      
+      console.log('Datos extraídos para la tienda:', data);
+      
+      // Actualizar productos
       setProducts(prevProducts => ({
         ...prevProducts,
         [code]: data
       }));
+      
+      // Añadir al carrito
+      const newItem = {
+        id: code,
+        name: data.nombre || 'Producto sin nombre',
+        price: data.precio || 0,
+        quantity: 1,
+        image: data.imagen?.replace(/[" ]/g, '') || ''
+      };
+      
+      console.log('Nuevo item creado:', newItem);
+      
+      setCartItems(prevItems => {
+        const existingItem = prevItems.find(item => item.id === code);
+        if (existingItem) {
+          return prevItems.map(item => 
+            item.id === code ? {...item, quantity: item.quantity + 1} : item
+          );
+        } else {
+          return [...prevItems, newItem];
+        }
+      });
+      
+      // Actualizar total
+      updateTotal();
     } catch (error) {
       console.error('Error fetching product info:', error);
     } finally {
@@ -109,11 +157,26 @@ function ComparePage() {
     }
   };
 
+  const updateTotal = () => {
+    setTotal(cartItems.reduce((sum, item) => sum + ((item.price || 0) * item.quantity), 0));
+  };
+  
+  useEffect(() => {
+    updateTotal();
+  }, [cartItems]);
+  
   const handleConfirm = () => {
     setCurrentScan(tempScannedCode);
     if (!scannedCodes.includes(tempScannedCode)) {
       setScannedCodes(prevCodes => [...prevCodes, tempScannedCode]);
       fetchProductInfo(tempScannedCode);
+    } else {
+      // Si ya existe, solo incrementamos la cantidad
+      setCartItems(prevItems => {
+        return prevItems.map(item => 
+          item.id === tempScannedCode ? {...item, quantity: item.quantity + 1} : item
+        );
+      });
     }
     setShowModal(false);
     initQuagga();
@@ -130,6 +193,13 @@ function ComparePage() {
       if (!scannedCodes.includes(manualCode)) {
         setScannedCodes(prevCodes => [...prevCodes, manualCode]);
         fetchProductInfo(manualCode);
+      } else {
+        // Si ya existe, solo incrementamos la cantidad
+        setCartItems(prevItems => {
+          return prevItems.map(item => 
+            item.id === manualCode ? {...item, quantity: item.quantity + 1} : item
+          );
+        });
       }
       e.target.value = '';
     } else {
@@ -155,11 +225,32 @@ function ComparePage() {
       initQuagga();
     }
   };
+  
+  const increaseQuantity = (id) => {
+    setCartItems(prevItems => {
+      return prevItems.map(item => 
+        item.id === id ? {...item, quantity: item.quantity + 1} : item
+      );
+    });
+  };
+  
+  const decreaseQuantity = (id) => {
+    setCartItems(prevItems => {
+      return prevItems.map(item => 
+        item.id === id && item.quantity > 1 ? {...item, quantity: item.quantity - 1} : item
+      );
+    });
+  };
+  
+  const removeItem = (id) => {
+    setCartItems(prevItems => prevItems.filter(item => item.id !== id));
+    setScannedCodes(prevCodes => prevCodes.filter(code => code !== id));
+  };
 
   return (
     <>
       <Publicidad/>
-      <h2>Comparar Precios</h2>
+      <h2>Lista de Compras - {selectedStore}</h2>
       <button onClick={toggleScanner} disabled={isLoading}>
         {isScannerActive ? 'Desactivar Escáner' : 'Activar Escáner'}
       </button>
@@ -201,6 +292,62 @@ function ComparePage() {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
           }
+          .cart-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+          }
+          .cart-item-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+          }
+          .cart-item-image {
+            width: 50px;
+            height: 50px;
+            object-fit: contain;
+          }
+          .cart-item-details {
+            flex: 1;
+          }
+          .cart-item-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+          }
+          .quantity-control {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+          }
+          .quantity-btn {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: 1px solid #ddd;
+            background: white;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+          }
+          .remove-btn {
+            background: #ff5252;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 5px 10px;
+            cursor: pointer;
+          }
+          .cart-total {
+            margin-top: 20px;
+            text-align: right;
+            font-size: 1.2rem;
+            font-weight: bold;
+          }
         `}
       </style>
       <div ref={scannerRef} id="interactive" className={`viewport scanner-container ${isScannerActive ? '' : 'hidden'}`}>
@@ -212,86 +359,59 @@ function ComparePage() {
           onCancel={handleCancel} 
         />
       )}
-      {scannedCodes.length > 0 && (
-        <div className="products-grid" style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-          gap: '1rem',
-          padding: '1rem'
-        }}>
-          {scannedCodes.map((code) => {
-            const productInfo = products[code];
-            if (!productInfo) return null;
-
-            const stores = ['maxidespensa', 'walmart', 'latorre', 'paiz'];
-            const lowestPrice = Math.min(...stores
-              .filter(store => productInfo[store])
-              .map(store => productInfo[store].precio));
-
-            return stores.map(store => {
-              const storeInfo = productInfo[store];
-              if (!storeInfo) return null;
-
-              return (
-                <div key={`${code}-${store}`} style={{
-                  border: '1px solid #ddd',
-                  borderRadius: '8px',
-                  padding: '1rem',
-                  backgroundColor: 'white',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.5rem'
-                }}>
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: '0.5rem'
-                  }}>
-                    <h3 style={{
-                      margin: 0,
-                      fontSize: '1.1rem',
-                      textTransform: 'capitalize'
-                    }}>{store}</h3>
-                    <span style={{
-                      backgroundColor: storeInfo.precio === lowestPrice ? '#4CAF50' : 'transparent',
-                      color: storeInfo.precio === lowestPrice ? 'white' : 'inherit',
-                      padding: storeInfo.precio === lowestPrice ? '0.25rem 0.5rem' : 0,
-                      borderRadius: '4px',
-                      fontSize: '0.9rem'
-                    }}>
-                      {storeInfo.precio === lowestPrice ? '¡Mejor Precio!' : ''}
-                    </span>
+      
+      {/* Lista de compras */}
+      <div style={{ marginTop: '20px', padding: '0 20px' }}>
+        <h3>Tu lista de compras</h3>
+        
+        {cartItems.length === 0 ? (
+          <p>No hay productos en tu lista. Escanea un código de barras para agregar productos.</p>
+        ) : (
+          <div>
+            {cartItems.map(item => (
+              <div key={item.id} className="cart-item">
+                <div className="cart-item-info">
+                  {item.image && (
+                    <img 
+                      src={item.image} 
+                      alt={item.name} 
+                      className="cart-item-image"
+                    />
+                  )}
+                  <div className="cart-item-details">
+                    <div>{item.name}</div>
+                    <div>Q{(item.price || 0).toFixed(2)}</div>
                   </div>
-                  <img 
-                    src={storeInfo.imagen.replace(/[" ]/g, '')}
-                    alt={storeInfo.nombre}
-                    style={{
-                      width: '100%',
-                      height: '200px',
-                      objectFit: 'contain',
-                      marginBottom: '0.5rem'
-                    }}
-                  />
-                  <h4 style={{
-                    margin: '0.5rem 0',
-                    fontSize: '1rem',
-                    lineHeight: '1.4'
-                  }}>{storeInfo.nombre}</h4>
-                  <p style={{
-                    margin: 0,
-                    fontSize: '1.2rem',
-                    fontWeight: 'bold',
-                    color: storeInfo.precio === lowestPrice ? '#4CAF50' : '#333'
-                  }}>Q{storeInfo.precio.toFixed(2)}</p>
                 </div>
-              );
-            });
-          })}
-        </div>
-      )}
-      <div>
+                <div className="cart-item-actions">
+                  <div className="quantity-control">
+                    <button 
+                      className="quantity-btn" 
+                      onClick={() => decreaseQuantity(item.id)}
+                      disabled={item.quantity <= 1}
+                    >-</button>
+                    <span>{item.quantity}</span>
+                    <button 
+                      className="quantity-btn" 
+                      onClick={() => increaseQuantity(item.id)}
+                    >+</button>
+                  </div>
+                  <div>Q{((item.price || 0) * item.quantity).toFixed(2)}</div>
+                  <button 
+                    className="remove-btn" 
+                    onClick={() => removeItem(item.id)}
+                  >×</button>
+                </div>
+              </div>
+            ))}
+            
+            <div className="cart-total">
+              Total: Q{(total || 0).toFixed(2)}
+            </div>
+          </div>
+        )}
+      </div>
+      <div style={{ marginTop: '20px' }}>
         <label htmlFor="manual-barcode">Entrada Manual (para agregar a la lista):</label>
         <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', alignItems: 'center', marginTop: '1rem' }}>
           <input
@@ -337,4 +457,4 @@ function ComparePage() {
   );
 }
 
-export default ComparePage;
+export default Compras;

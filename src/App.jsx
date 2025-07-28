@@ -4,7 +4,7 @@ import './App.css'
 import Home from './components/Home';
 import StoreSelect from './components/StoreSelect';
 import ComparePage from './components/ComparePage';
-import ScanPage from './components/ScanPage';
+import Compras from './components/Compras';
 
 
 
@@ -15,7 +15,7 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="/stores" element={<StoreSelect />} />
         <Route path="/compare" element={<ComparePage />} />
-        <Route path="/scan" element={<ScanPage />} />
+        <Route path="/Compras" element={<Compras />} />
       </Routes>
     </Router>
   );

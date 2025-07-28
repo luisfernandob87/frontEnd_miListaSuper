@@ -11,7 +11,7 @@ const StoreSelect = () => {
         <h2>Selecciona una tienda</h2>
         <div className="store-buttons">
           {stores.map(store => (
-            <button key={store} onClick={() => navigate('/scan', { state: { store } })}>{store}</button>
+            <button key={store} onClick={() => navigate('/Compras', { state: { store } })}>{store}</button>
           ))}
         </div>
       </div>
